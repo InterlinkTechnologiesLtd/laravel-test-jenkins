@@ -1,0 +1,66 @@
+version: "3.9"
+services:
+  ci_users_backend:
+    build:
+      args:
+        user: user
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    image: ci_users_backend
+    container_name: ci_users_ms
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./:/var/www
+    depends_on:
+      - ci_users_db
+    networks:
+      - users
+
+  ci_users_db:
+    image: mysql:8
+    container_name: ci_users_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./storage/dbdata:/docker-entrypoint-initdb.d
+    networks:
+      - users
+
+  nginx:
+    image: nginx:alpine
+    container_name: ci_users_nginx
+    restart: unless-stopped
+    ports:
+      - 2000:80
+    volumes:
+      - ./:/var/www
+      - ./docker-compose/nginx:/etc/nginx/conf.d/
+    networks:
+      - users
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
+    restart: unless-stopped
+    ports:
+      - 8070:8080
+      - 50000:50000
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - users
+
+networks:
+  users:
+    name: users
+
+volumes:
+  jenkins_home:

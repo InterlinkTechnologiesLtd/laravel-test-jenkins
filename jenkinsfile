@@ -1,27 +1,15 @@
 services:
   service1:
     repo: 'https://github.com/InterlinkTechnologiesLtd/laravel-test-jenkins.git'
-    live_server_ip: '192.168.1.112'
+    live_server_ip: '103.219.163.115'
 
 
 pipeline {
     agent any
 
-    environment {
-        DOCKER_REGISTRY = "your-dockerhub-username"
-        CONFIG_FILE = 'services-config.yml'
-    }
-
+ 
     stages {
-        stage('Read Config') {
-            steps {
-                script {
-                    def config = readYaml file: CONFIG_FILE
-                    env.SERVICES = config.services.collect { it.key }
-                    env.SERVICES_CONFIG = config.services
-                }
-            }
-        }
+
 
         stage('Clone Repositories') {
             steps {
@@ -36,32 +24,6 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
-            steps {
-                script {
-                    SERVICES.each { service ->
-                        def imageName = "${DOCKER_REGISTRY}/${service}:latest"
-                        dir(service) {
-                            docker.build(imageName)
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Images') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        SERVICES.each { service ->
-                            def imageName = "${DOCKER_REGISTRY}/${service}:latest"
-                            docker.image(imageName).push()
-                        }
-                    }
-                }
-            }
-        }
-
         stage('Deploy to Live Servers') {
             steps {
                 script {
@@ -69,9 +31,7 @@ pipeline {
                         def serverIp = SERVICES_CONFIG[service].live_server_ip
                         dir(service) {
                             sh """
-                                ssh user@${serverIp} 'docker-compose down'
-                                ssh user@${serverIp} 'docker-compose pull'
-                                ssh user@${serverIp} 'docker-compose up -d'
+                                ssh tvnl@${live_server_ip} 'docker-compose build'
                             """
                         }
                     }
